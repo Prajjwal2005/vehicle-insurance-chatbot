@@ -1,0 +1,8 @@
+{
+  "venvPath": ".",
+  "venv": ".venv",
+  "include": ["app"],
+  "exclude": ["**/__pycache__", ".venv"],
+  "pythonVersion": "3.10",
+  "typeCheckingMode": "basic"
+}
