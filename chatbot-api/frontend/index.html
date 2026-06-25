@@ -45,6 +45,21 @@ body{
 .message.bot{align-self:flex-start; background:var(--bot); border:1px solid var(--bot-border); border-bottom-left-radius:5px}
 .message.error{align-self:flex-start; background:var(--err-bg); border:1px solid #fecaca; color:var(--err)}
 @keyframes pop{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.widget{align-self:flex-start; max-width:88%; display:flex; flex-direction:column; gap:8px; animation:pop .18s ease}
+.plan{background:#fff; border:1px solid var(--bot-border); border-left:4px solid var(--teal); border-radius:12px; padding:12px 14px}
+.plan .name{font-weight:650; font-size:15px}
+.plan .price{color:var(--teal-dark); font-weight:600; font-size:14px; margin:2px 0 6px}
+.plan ul{margin:0; padding-left:18px; color:var(--muted); font-size:13px; line-height:1.55}
+.receipt{background:#ecfdf5; border:1px solid #a7f3d0; border-radius:12px; padding:14px 16px}
+.receipt .label{font-size:13px; color:var(--teal-dark); font-weight:600}
+.receipt .number{font-size:19px; font-weight:700; letter-spacing:.5px; margin-top:3px; color:var(--text)}
+.badge{display:inline-flex; align-items:center; gap:8px; background:#fff; border:1px solid var(--bot-border); border-radius:999px; padding:8px 14px; font-size:14px; align-self:flex-start}
+.badge .pill{padding:2px 10px; border-radius:999px; font-size:12px; font-weight:700; text-transform:capitalize}
+.pill.submitted{background:#dbeafe; color:#1d4ed8}
+.pill.approved{background:#dcfce7; color:#15803d}
+.pill.declined{background:#fee2e2; color:#b91c1c}
+.pill.completed{background:#e0e7ff; color:#4338ca}
+.pill.draft{background:#f3f4f6; color:#6b7280}
 .typing{padding:0 22px 8px; display:flex; gap:5px; align-items:center; height:20px}
 .typing.hidden{display:none}
 .typing span{width:8px;height:8px;border-radius:50%;background:#9ca3af;animation:blink 1.2s infinite both}
@@ -96,15 +111,57 @@ body{
 
   function scrollDown(){ messagesEl.scrollTop = messagesEl.scrollHeight; }
 
+  function el(tag, cls, text){
+    var e = document.createElement(tag);
+    if(cls) e.className = cls;
+    if(text != null) e.textContent = text;
+    return e;
+  }
+
   function addMessage(text, who){
     var clean = (text || "").trim();
-    if(!clean) return;            // never render an empty bubble
-    var div = document.createElement("div");
-    div.className = "message " + who;
-    div.textContent = clean;
-    messagesEl.appendChild(div);
+    if(!clean) return;
+    messagesEl.appendChild(el("div", "message " + who, clean));
     scrollDown();
   }
+
+  function renderWidget(w){
+    var wrap = el("div", "widget");
+    if(w.type === "policies"){
+      (w.data.plans || []).forEach(function(plan){
+        var card = el("div", "plan");
+        card.appendChild(el("div", "name", plan.name));
+        if(plan.price != null) card.appendChild(el("div", "price", "$" + plan.price + " / year"));
+        if(plan.features && plan.features.length){
+          var ul = el("ul");
+          plan.features.forEach(function(f){ ul.appendChild(el("li", null, f)); });
+          card.appendChild(ul);
+        }
+        wrap.appendChild(card);
+      });
+    } else if(w.type === "policy"){
+      var rp = el("div", "receipt");
+      rp.appendChild(el("div", "label", "Policy issued"));
+      rp.appendChild(el("div", "number", w.data.policy_number || ""));
+      wrap.appendChild(rp);
+    } else if(w.type === "claim"){
+      var rc = el("div", "receipt");
+      rc.appendChild(el("div", "label", "Claim filed"));
+      rc.appendChild(el("div", "number", w.data.claim_number || ""));
+      wrap.appendChild(rc);
+    } else if(w.type === "claim_status"){
+      var b = el("div", "badge");
+      b.appendChild(el("span", null, w.data.claim_number || "Claim"));
+      b.appendChild(el("span", "pill " + String(w.data.status || "").toLowerCase(), w.data.status || ""));
+      wrap.appendChild(b);
+    } else {
+      return;
+    }
+    messagesEl.appendChild(wrap);
+    scrollDown();
+  }
+
+  function renderWidgets(widgets){ (widgets || []).forEach(renderWidget); }
 
   function setBusy(busy){
     inputEl.disabled = busy;
@@ -148,6 +205,7 @@ body{
         var data = await res.json();
         sessionId = data.session_id;
         addMessage((data.reply || "").trim() || EMPTY_FALLBACK, "bot");
+        renderWidgets(data.widgets);
       }
     } catch(err){
       addMessage("Could not reach the server. Make sure the chatbot is running.", "error");

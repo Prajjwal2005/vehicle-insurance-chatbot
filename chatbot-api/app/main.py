@@ -12,6 +12,7 @@ from langchain_core.runnables import RunnableConfig
 from app.agent import get_agent
 from app.config import get_settings
 from app.schemas import ChatRequest, ChatResponse
+from app.widgets import widgets_for_turn
 
 logger = logging.getLogger("chatbot")
 
@@ -70,7 +71,11 @@ async def chat(request: ChatRequest) -> ChatResponse:
                    "may be rate-limited). Please try again in a moment.",
         ) from exc
 
-    # Some model turns (e.g. reasoning-only or a degraded response) come back with
-    # no usable text. Never return an empty reply - fall back to a gentle prompt.
-    reply = _reply_text(result["messages"][-1]) or _EMPTY_FALLBACK
-    return ChatResponse(session_id=session_id, reply=reply)
+    messages = result["messages"]
+    # Never return an empty reply (reasoning-only / degraded turns can be empty).
+    reply = _reply_text(messages[-1]) or _EMPTY_FALLBACK
+    return ChatResponse(
+        session_id=session_id,
+        reply=reply,
+        widgets=widgets_for_turn(messages),
+    )
