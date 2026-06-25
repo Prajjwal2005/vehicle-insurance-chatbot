@@ -79,19 +79,34 @@ async def chat(request: ChatRequest) -> ChatResponse:
     session_id = request.session_id or str(uuid.uuid4())
     config: RunnableConfig = {"configurable": {"thread_id": session_id}}
 
+    import asyncio
     agent = get_agent()
-    try:
-        result = await agent.ainvoke(
-            {"messages": [HumanMessage(content=request.message)]},
-            config,
-        )
-    except Exception as exc:
-        logger.exception("Agent invocation failed")
+    
+    result = None
+    last_exc = None
+    for attempt in range(4):
+        try:
+            result = await agent.ainvoke(
+                {"messages": [HumanMessage(content=request.message)]},
+                config,
+            )
+            break
+        except Exception as exc:
+            last_exc = exc
+            err_str = str(exc)
+            if "503" in err_str or "UNAVAILABLE" in err_str or "429" in err_str or "RESOURCE_EXHAUSTED" in err_str:
+                logger.warning(f"Model busy/rate-limited (attempt {attempt+1}/4). Retrying in 2.5s...")
+                await asyncio.sleep(2.5)
+                continue
+            break
+
+    if result is None:
+        logger.exception("Agent invocation failed after retries", exc_info=last_exc)
         raise HTTPException(
             status_code=503,
             detail="The assistant is temporarily unavailable (the language model "
                    "may be rate-limited). Please try again in a moment.",
-        ) from exc
+        ) from last_exc
 
     messages = result["messages"]
     reply = _reply_text(messages[-1]) or _EMPTY_FALLBACK

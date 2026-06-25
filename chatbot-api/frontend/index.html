@@ -197,26 +197,32 @@ body{
   var isListening = false;
 
   if(recognition){
-    recognition.continuous = false;
-    recognition.interimResults = false;
+    recognition.continuous = true;
+    recognition.interimResults = true;
     recognition.lang = "en-US";
     recognition.onstart = function(){
       isListening = true;
       micBtn.classList.add("listening");
-      inputEl.placeholder = "Listening...";
+      inputEl.placeholder = "Listening... (click Mic again to stop)";
     };
     recognition.onresult = function(event){
-      var transcript = event.results[0][0].transcript;
+      var transcript = "";
+      for (var i = 0; i < event.results.length; i++) {
+        transcript += event.results[i][0].transcript;
+      }
       inputEl.value = transcript;
       autosize();
-      send();
     };
     recognition.onerror = function(event){
       console.error("Speech recognition error", event.error);
       stopListening();
     };
     recognition.onend = function(){
-      stopListening();
+      if (isListening) {
+        try { recognition.start(); } catch(e) {}
+      } else {
+        stopListening();
+      }
     };
   } else {
     if (micBtn) micBtn.style.display = "none";
@@ -232,6 +238,7 @@ body{
     micBtn.addEventListener("click", function(){
       if(!recognition) return;
       if(isListening){
+        isListening = false;
         recognition.stop();
       } else {
         recognition.start();
@@ -247,6 +254,10 @@ body{
   }
 
   async function send(){
+    if(recognition && isListening) {
+      isListening = false;
+      recognition.stop();
+    }
     var text = inputEl.value.trim();
     if(!text) return;
     addMessage(text, "user");
