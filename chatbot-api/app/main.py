@@ -18,6 +18,7 @@ logger = logging.getLogger("chatbot")
 app = FastAPI(title=get_settings().app_name)
 
 _FRONTEND = Path(__file__).resolve().parent.parent / "frontend" / "index.html"
+_EMPTY_FALLBACK = "Sorry, I did not catch that. Could you rephrase or try again?"
 
 
 def _reply_text(message: BaseMessage) -> str:
@@ -25,7 +26,7 @@ def _reply_text(message: BaseMessage) -> str:
     blocks, which is what Gemini returns when it includes reasoning) to text."""
     content = message.content
     if isinstance(content, str):
-        return content
+        return content.strip()
     parts: list[str] = []
     for block in content:
         if isinstance(block, str):
@@ -69,5 +70,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
                    "may be rate-limited). Please try again in a moment.",
         ) from exc
 
-    reply = _reply_text(result["messages"][-1])
+    # Some model turns (e.g. reasoning-only or a degraded response) come back with
+    # no usable text. Never return an empty reply - fall back to a gentle prompt.
+    reply = _reply_text(result["messages"][-1]) or _EMPTY_FALLBACK
     return ChatResponse(session_id=session_id, reply=reply)

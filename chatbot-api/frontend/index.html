@@ -27,6 +27,12 @@ body{
 .header svg{width:32px;height:32px;flex:none}
 .header h1{font-size:18px;font-weight:650;letter-spacing:.2px}
 .header .sub{font-size:13px;opacity:.85;margin-top:2px}
+.header .newchat{
+  margin-left:auto; border:1px solid rgba(255,255,255,.55); background:rgba(255,255,255,.12);
+  color:#fff; font:inherit; font-size:13px; font-weight:600; padding:7px 14px;
+  border-radius:9px; cursor:pointer; white-space:nowrap; transition:background .15s;
+}
+.header .newchat:hover{background:rgba(255,255,255,.24)}
 .messages{
   flex:1; overflow-y:auto; padding:22px; display:flex; flex-direction:column;
   gap:12px; background:#f7f9fa;
@@ -67,6 +73,7 @@ body{
       <h1>Vehicle Insurance Assistant</h1>
       <div class="sub">Apply for insurance, file a claim, or check claim status</div>
     </div>
+    <button id="newchat" class="newchat" title="Start a fresh conversation">New chat</button>
   </header>
   <main id="messages" class="messages"></main>
   <div id="typing" class="typing hidden"><span></span><span></span><span></span></div>
@@ -81,14 +88,20 @@ body{
   var inputEl = document.getElementById("input");
   var sendBtn = document.getElementById("send");
   var typingEl = document.getElementById("typing");
+  var newChatBtn = document.getElementById("newchat");
   var sessionId = null;
+
+  var WELCOME = "Hi! I am your vehicle insurance assistant. I can help you apply for insurance, file a claim, or check the status of a claim. What would you like to do?";
+  var EMPTY_FALLBACK = "Sorry, I did not catch that. Could you rephrase or try again?";
 
   function scrollDown(){ messagesEl.scrollTop = messagesEl.scrollHeight; }
 
   function addMessage(text, who){
+    var clean = (text || "").trim();
+    if(!clean) return;            // never render an empty bubble
     var div = document.createElement("div");
     div.className = "message " + who;
-    div.textContent = text;
+    div.textContent = clean;
     messagesEl.appendChild(div);
     scrollDown();
   }
@@ -103,6 +116,15 @@ body{
   function autosize(){
     inputEl.style.height = "auto";
     inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + "px";
+  }
+
+  function resetChat(){
+    sessionId = null;
+    messagesEl.innerHTML = "";
+    addMessage(WELCOME, "bot");
+    inputEl.value = "";
+    autosize();
+    inputEl.focus();
   }
 
   async function send(){
@@ -125,7 +147,7 @@ body{
       } else {
         var data = await res.json();
         sessionId = data.session_id;
-        addMessage(data.reply, "bot");
+        addMessage((data.reply || "").trim() || EMPTY_FALLBACK, "bot");
       }
     } catch(err){
       addMessage("Could not reach the server. Make sure the chatbot is running.", "error");
@@ -140,8 +162,9 @@ body{
     if(e.key === "Enter" && !e.shiftKey){ e.preventDefault(); send(); }
   });
   sendBtn.addEventListener("click", send);
+  newChatBtn.addEventListener("click", resetChat);
 
-  addMessage("Hi! I am your vehicle insurance assistant. I can help you apply for insurance, file a claim, or check the status of a claim. What would you like to do?", "bot");
+  addMessage(WELCOME, "bot");
   inputEl.focus();
 })();
 </script>
