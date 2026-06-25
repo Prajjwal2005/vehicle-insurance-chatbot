@@ -78,6 +78,10 @@ body{
 }
 .composer button:hover{background:var(--teal-dark)}
 .composer button:disabled{background:#9ca3af; cursor:not-allowed}
+.composer button.mic{background:#6b7280; margin-right:8px; padding:0 16px; font-size: 18px;}
+.composer button.mic:hover{background:#4b5563;}
+.composer button.mic.listening{background:var(--err); animation:pulse 1.5s infinite;}
+@keyframes pulse{0%{opacity:1}50%{opacity:.6}100%{opacity:1}}
 </style>
 </head>
 <body>
@@ -94,6 +98,7 @@ body{
   <div id="typing" class="typing hidden"><span></span><span></span><span></span></div>
   <footer class="composer">
     <textarea id="input" rows="1" placeholder="Type your message..."></textarea>
+    <button id="mic" class="mic" title="Click to speak">🎤</button>
     <button id="send">Send</button>
   </footer>
 </div>
@@ -104,6 +109,7 @@ body{
   var sendBtn = document.getElementById("send");
   var typingEl = document.getElementById("typing");
   var newChatBtn = document.getElementById("newchat");
+  var micBtn = document.getElementById("mic");
   var sessionId = null;
 
   var WELCOME = "Hi! I am your vehicle insurance assistant. I can help you apply for insurance, file a claim, or check the status of a claim. What would you like to do?";
@@ -182,6 +188,62 @@ body{
     inputEl.value = "";
     autosize();
     inputEl.focus();
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+  }
+
+  var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  var recognition = SpeechRecognition ? new SpeechRecognition() : null;
+  var synth = window.speechSynthesis;
+  var isListening = false;
+
+  if(recognition){
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = "en-US";
+    recognition.onstart = function(){
+      isListening = true;
+      micBtn.classList.add("listening");
+      inputEl.placeholder = "Listening...";
+    };
+    recognition.onresult = function(event){
+      var transcript = event.results[0][0].transcript;
+      inputEl.value = transcript;
+      autosize();
+      send();
+    };
+    recognition.onerror = function(event){
+      console.error("Speech recognition error", event.error);
+      stopListening();
+    };
+    recognition.onend = function(){
+      stopListening();
+    };
+  } else {
+    if (micBtn) micBtn.style.display = "none";
+  }
+
+  function stopListening(){
+    isListening = false;
+    if (micBtn) micBtn.classList.remove("listening");
+    inputEl.placeholder = "Type your message...";
+  }
+
+  if (micBtn) {
+    micBtn.addEventListener("click", function(){
+      if(!recognition) return;
+      if(isListening){
+        recognition.stop();
+      } else {
+        recognition.start();
+      }
+    });
+  }
+
+  function speakText(text) {
+    if(!synth) return;
+    synth.cancel();
+    var utterance = new SpeechSynthesisUtterance(text);
+    synth.speak(utterance);
   }
 
   async function send(){
@@ -204,8 +266,10 @@ body{
       } else {
         var data = await res.json();
         sessionId = data.session_id;
-        addMessage((data.reply || "").trim() || EMPTY_FALLBACK, "bot");
+        var replyText = (data.reply || "").trim() || EMPTY_FALLBACK;
+        addMessage(replyText, "bot");
         renderWidgets(data.widgets);
+        speakText(replyText);
       }
     } catch(err){
       addMessage("Could not reach the server. Make sure the chatbot is running.", "error");

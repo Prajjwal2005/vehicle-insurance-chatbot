@@ -54,7 +54,7 @@ async def client(session_factory):
 
     app.dependency_overrides[get_session] = override_get_session
     transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(transport=transport, base_url="http://test") as c:
+    async with httpx.AsyncClient(transport=transport, base_url="http://test", headers={"X-API-Key": "demo-secret-key"}) as c:
         yield c
     app.dependency_overrides.clear()
 

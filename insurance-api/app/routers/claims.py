@@ -1,12 +1,16 @@
 """Routes for the claim flow."""
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Depends, status
 
 from app import services
-from app.dependencies import SessionDep
+from app.dependencies import SessionDep, get_current_user
 from app.schemas import ClaimCreate, ClaimRead, ClaimStatusRead, ClaimVerifyResult
 
-router = APIRouter(prefix="/claims", tags=["claims"])
+router = APIRouter(
+    prefix="/claims",
+    tags=["claims"],
+    dependencies=[Depends(get_current_user)],
+)
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)

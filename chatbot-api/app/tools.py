@@ -10,6 +10,7 @@ import httpx
 from langchain_core.tools import tool
 
 from app.insurance_client import InsuranceClient
+from app.rag import search_insurance_knowledge as rag_search
 
 client = InsuranceClient()
 
@@ -150,7 +151,18 @@ async def check_claim_status(claim_number: str) -> str:
         return _error(exc)
 
 
+@tool
+def search_knowledge_base(query: str) -> str:
+    """Search the insurance knowledge base for policy details, coverage rules, or FAQs.
+    Use this when the user asks general questions about how things work."""
+    try:
+        return rag_search(query)
+    except Exception as exc:
+        return json.dumps({"error": str(exc)})
+
+
 TOOLS = [
     create_application, list_policies, select_policy, confirm_application,
     create_claim, verify_claim, confirm_claim, check_claim_status,
+    search_knowledge_base,
 ]

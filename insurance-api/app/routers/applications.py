@@ -1,9 +1,9 @@
 """Routes for the apply-for-insurance flow."""
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Depends, status
 
 from app import services
-from app.dependencies import SessionDep
+from app.dependencies import SessionDep, get_current_user
 from app.schemas import (
     ApplicationCreate,
     ApplicationRead,
@@ -11,7 +11,12 @@ from app.schemas import (
     PolicySelect,
 )
 
-router = APIRouter(prefix="/applications", tags=["applications"])
+
+router = APIRouter(
+    prefix="/applications",
+    tags=["applications"],
+    dependencies=[Depends(get_current_user)],
+)
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
