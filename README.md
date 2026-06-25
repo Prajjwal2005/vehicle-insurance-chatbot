@@ -104,6 +104,7 @@ To stop: `docker compose down`. Data persists in a Docker volume; to reset:
 `docker compose down -v`.
 ## What the chatbot can do
 
+- **Answer General Questions** - uses a built-in knowledge base (RAG) to answer questions about policy types, coverage details, pricing, and general rules.
 - **Apply for insurance** - collects customer and vehicle details and a coverage
   choice (Full or Third Party, with an optional rent-a-car add-on), drafts the
   application, lists the applicable plans, and after you confirm returns a policy
@@ -115,10 +116,20 @@ To stop: `docker compose down`. Data persists in a Docker volume; to reset:
 The assistant always summarises and waits for an explicit "yes" before it
 submits anything irreversible.
 
+## Features
+
+- **Rich Interactive UI Widgets:** The chatbot doesn't just return raw text; it renders beautiful, interactive widgets (e.g. policy plans with pricing, receipt badges for generated policy/claim numbers).
+- **Voice Capabilities:** Features a microphone button for seamless voice interactions. Uses the native Web Speech API for low-latency Speech-to-Text (STT) and reads out bot replies using Text-to-Speech (TTS).
+- **Retrieval-Augmented Generation (RAG):** Integrates an in-memory vector store equipped with Gemini embeddings to retrieve relevant insurance policy rules before answering user questions.
+- **API Security:** The Insurance API endpoints are secured with a mock dependency checking for an `X-API-Key`.
+
 ## Tests
 
 ```
 cd insurance-api
+.\.venv\Scripts\python.exe -m pytest
+
+cd ../chatbot-api
 .\.venv\Scripts\python.exe -m pytest
 ```
 
@@ -130,7 +141,7 @@ cd insurance-api
 | Schema bootstrap   | `create_all`           | `create_all`                     | Alembic migrations  |
 | Chat memory        | in-memory checkpointer | in-memory checkpointer           | persistent (PG/Redis)|
 | HTTP client        | pooled                 | pooled                           | -                   |
-| CORS               | `*` (dev)              | configurable `CORS_ALLOW_ORIGINS`| + auth              |
+| CORS & Auth        | `*` (dev) & Mock API Key | `CORS` & `X-API-Key` required  | JWT / OAuth2 Auth   |
 | Packaging          | local venvs            | Dockerfiles + compose            | -                   |
 | Agent date         | per-request            | per-request                      | -                   |
 
