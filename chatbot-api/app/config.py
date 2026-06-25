@@ -6,11 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    """Configuration loaded from environment variables / .env.
-
-    google_api_key defaults to empty so a missing key fails loudly at the
-    connectivity check rather than silently.
-    """
+    """Configuration loaded from environment variables / .env."""
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -21,7 +17,9 @@ class Settings(BaseSettings):
     app_name: str = "Insurance Chatbot API"
     google_api_key: str = ""
     gemini_model: str = "gemini-2.5-flash-lite"
+    gemini_fallback_model: str = "gemini-2.5-flash"
     insurance_api_url: str = "http://127.0.0.1:8001"
+    cors_allow_origins: str = "*"
 
 
 @lru_cache

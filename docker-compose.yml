@@ -1,0 +1,47 @@
+# docker compose up --build
+# Then open http://localhost:8000
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: insurance
+      POSTGRES_PASSWORD: insurance
+      POSTGRES_DB: insurance
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U insurance"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  insurance-api:
+    build: ./insurance-api
+    ports:
+      - "8001:8001"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://insurance:insurance@postgres:5432/insurance
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  chatbot-api:
+    build: ./chatbot-api
+    ports:
+      - "8000:8000"
+    environment:
+      INSURANCE_API_URL: http://insurance-api:8001
+      CORS_ALLOW_ORIGINS: "*"
+      # Pass your Gemini key at runtime:
+      #   GOOGLE_API_KEY=your-key docker compose up --build
+      # Or add it to a root .env file (gitignored).
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash-lite}
+    depends_on:
+      - insurance-api
+
+volumes:
+  pgdata:

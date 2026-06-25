@@ -77,6 +77,31 @@ Then open http://127.0.0.1:8000 and start chatting.
 - Insurance API docs (Swagger UI): http://127.0.0.1:8001/docs
 - Health checks: `GET /health` on both services.
 
+
+## Run with Docker (production-like)
+
+Requires Docker Desktop running. From the project root:
+
+```
+# Create a root .env with your Gemini key (gitignored)
+copy .env.example .env
+# Edit .env: set GOOGLE_API_KEY=your-key-here
+
+# Build and start everything (Postgres + insurance API + chatbot)
+docker compose up --build
+
+# Or in detached mode:
+docker compose up --build -d
+docker compose logs -f
+```
+
+This brings up three containers:
+- **postgres** (port 5432) - the insurance database
+- **insurance-api** (port 8001) - seeded and ready
+- **chatbot-api** (port 8000) - chat UI at http://localhost:8000
+
+To stop: `docker compose down`. Data persists in a Docker volume; to reset:
+`docker compose down -v`.
 ## What the chatbot can do
 
 - **Apply for insurance** - collects customer and vehicle details and a coverage
@@ -99,14 +124,15 @@ cd insurance-api
 
 ## Dev vs production
 
-| Concern            | Local dev (now)          | Production target             |
-| ------------------ | ------------------------ | ----------------------------- |
-| Insurance database | SQLite                   | Postgres (+ pgvector for RAG) |
-| Schema bootstrap   | `create_all` on startup  | Alembic migrations            |
-| Chat memory        | in-memory checkpointer   | persistent checkpointer       |
-| HTTP client        | client-per-request       | pooled client                 |
-| CORS / auth        | open (same origin)       | locked down + auth            |
-| Packaging          | run locally              | Dockerfiles + compose         |
+| Concern            | Local dev              | Docker (done)                    | Remaining          |
+| ------------------ | ---------------------- | -------------------------------- | ------------------- |
+| Insurance database | SQLite                 | Postgres 16 via compose          | -                   |
+| Schema bootstrap   | `create_all`           | `create_all`                     | Alembic migrations  |
+| Chat memory        | in-memory checkpointer | in-memory checkpointer           | persistent (PG/Redis)|
+| HTTP client        | pooled                 | pooled                           | -                   |
+| CORS               | `*` (dev)              | configurable `CORS_ALLOW_ORIGINS`| + auth              |
+| Packaging          | local venvs            | Dockerfiles + compose            | -                   |
+| Agent date         | per-request            | per-request                      | -                   |
 
 ## Notes on the Gemini free tier
 

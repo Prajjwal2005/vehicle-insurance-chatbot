@@ -191,14 +191,22 @@ would add complexity for no benefit.
 
 ## 7. Known limitations and future work
 
-Local-dev substitutes to swap for production (tracked):
+Completed in the production pass:
 
-- SQLite -> Postgres (+ pgvector for retrieval); `create_all` -> Alembic.
-- In-memory agent checkpointer -> persistent (Postgres/Redis).
-- httpx client-per-request -> pooled client.
-- Build-time date injection -> per-request.
-- Open same-origin -> locked-down CORS + auth.
-- Dockerfiles + compose for both services.
+- SQLite -> Postgres 16 (via `docker compose`, the insurance API is
+  DB-agnostic through SQLAlchemy; swapped by changing `DATABASE_URL`).
+- Dockerfiles for both services and a `docker-compose.yml` that brings up
+  Postgres, the insurance API, and the chatbot in one command.
+- httpx client-per-request -> pooled persistent client with clean shutdown.
+- Build-time date injection -> per-request via callable prompt.
+- CORS middleware with a configurable `CORS_ALLOW_ORIGINS` setting.
+
+Remaining work:
+
+- `create_all` -> Alembic migrations for safe schema changes.
+- In-memory agent checkpointer -> persistent (langgraph-checkpoint-postgres
+  or Redis).
+- Auth (API keys or JWT) for the insurance API.
 
 Planned bonuses:
 

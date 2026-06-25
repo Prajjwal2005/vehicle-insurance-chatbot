@@ -1,7 +1,7 @@
 """Async HTTP client for the insurance API.
 
-A thin wrapper: one method per insurance endpoint, returning the parsed JSON.
-The agent's tools call these; HTTP errors propagate to the caller to handle.
+Holds one shared httpx.AsyncClient for the process (connection pooling); it is
+closed on shutdown via aclose(). One method per insurance endpoint.
 """
 
 import httpx
@@ -10,19 +10,28 @@ from app.config import get_settings
 
 
 class InsuranceClient:
-    """Talks to the insurance system over REST."""
+    """Talks to the insurance system over REST, reusing one pooled client."""
 
     def __init__(self, base_url: str | None = None, timeout: float = 10.0) -> None:
         self.base_url = base_url or get_settings().insurance_api_url
         self.timeout = timeout
+        self._client: httpx.AsyncClient | None = None
+
+    def _http(self) -> httpx.AsyncClient:
+        if self._client is None or self._client.is_closed:
+            self._client = httpx.AsyncClient(base_url=self.base_url, timeout=self.timeout)
+        return self._client
+
+    async def aclose(self) -> None:
+        if self._client is not None and not self._client.is_closed:
+            await self._client.aclose()
 
     async def _request(self, method: str, path: str, **kwargs) -> httpx.Response:
-        async with httpx.AsyncClient(base_url=self.base_url, timeout=self.timeout) as client:
-            response = await client.request(method, path, **kwargs)
-            response.raise_for_status()
-            return response
+        response = await self._http().request(method, path, **kwargs)
+        response.raise_for_status()
+        return response
 
-    # ── Apply flow ──────────────────────────────────────────────
+    # -- Apply flow --
     async def create_application(self, payload: dict) -> dict:
         return (await self._request("POST", "/applications", json=payload)).json()
 
@@ -40,7 +49,7 @@ class InsuranceClient:
     async def confirm_application(self, application_id: int) -> dict:
         return (await self._request("POST", f"/applications/{application_id}/confirm")).json()
 
-    # ── Claim flow ──────────────────────────────────────────────
+    # -- Claim flow --
     async def create_claim(self, payload: dict) -> dict:
         return (await self._request("POST", "/claims", json=payload)).json()
 
