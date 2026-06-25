@@ -18,7 +18,9 @@ class Settings(BaseSettings):
     google_api_key: str = ""
     gemini_model: str = "gemini-2.5-flash-lite"
     gemini_fallback_model: str = "gemini-2.5-flash"
+    embedding_model: str = "models/gemini-embedding-001"
     insurance_api_url: str = "http://127.0.0.1:8001"
+    insurance_api_key: str = "demo-secret-key"   # sent as X-API-Key on every request
     cors_allow_origins: str = "*"
 
 

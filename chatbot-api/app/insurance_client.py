@@ -1,7 +1,8 @@
 """Async HTTP client for the insurance API.
 
 Holds one shared httpx.AsyncClient for the process (connection pooling); it is
-closed on shutdown via aclose(). One method per insurance endpoint.
+closed on shutdown via aclose(). One method per insurance endpoint. Every
+request carries the X-API-Key header so the insurance API accepts it.
 """
 
 import httpx
@@ -13,13 +14,17 @@ class InsuranceClient:
     """Talks to the insurance system over REST, reusing one pooled client."""
 
     def __init__(self, base_url: str | None = None, timeout: float = 10.0) -> None:
-        self.base_url = base_url or get_settings().insurance_api_url
+        settings = get_settings()
+        self.base_url = base_url or settings.insurance_api_url
         self.timeout = timeout
+        self.headers = {"X-API-Key": settings.insurance_api_key}
         self._client: httpx.AsyncClient | None = None
 
     def _http(self) -> httpx.AsyncClient:
         if self._client is None or self._client.is_closed:
-            self._client = httpx.AsyncClient(base_url=self.base_url, timeout=self.timeout)
+            self._client = httpx.AsyncClient(
+                base_url=self.base_url, timeout=self.timeout, headers=self.headers,
+            )
         return self._client
 
     async def aclose(self) -> None:
