@@ -3,6 +3,7 @@
 from langchain_core.documents import Document
 from langchain_core.vectorstores import InMemoryVectorStore
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from pydantic import SecretStr
 from app.config import get_settings
 
 SYNTHETIC_DATA = [
@@ -20,8 +21,8 @@ SYNTHETIC_DATA = [
 def get_retriever():
     settings = get_settings()
     embeddings = GoogleGenerativeAIEmbeddings(
-        model="models/embedding-001",
-        google_api_key=settings.google_api_key
+        model=settings.embedding_model,
+        api_key=SecretStr(settings.google_api_key),
     )
     docs = [Document(page_content=text) for text in SYNTHETIC_DATA]
     vectorstore = InMemoryVectorStore.from_documents(docs, embeddings)
@@ -34,9 +35,9 @@ def search_insurance_knowledge(query: str) -> str:
     global _retriever
     if _retriever is None:
         _retriever = get_retriever()
-    
+
     results = _retriever.invoke(query)
     if not results:
         return "No relevant information found in the knowledge base."
-    
+
     return "\n".join([f"- {doc.page_content}" for doc in results])
