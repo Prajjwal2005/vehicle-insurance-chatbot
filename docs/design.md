@@ -136,8 +136,7 @@ for simplicity and is sufficient here.)
 
 A single self-contained index.html (HTML/CSS/vanilla JS, no build step) served by
 the chatbot at `/`. It holds the session_id across turns, renders the
-conversation, shows a typing indicator, and displays a friendly error message
-when the model is briefly rate-limited. Served same-origin, so no CORS yet.
+conversation, and renders interactive UI widgets for plans and receipts. It also integrates the native Web Speech API for low-latency Speech-to-Text (microphone input) and Text-to-Speech (bot voice replies).
 
 ## 5. Key decisions
 
@@ -200,21 +199,16 @@ Completed in the production pass:
 - httpx client-per-request -> pooled persistent client with clean shutdown.
 - Build-time date injection -> per-request via callable prompt.
 - CORS middleware with a configurable `CORS_ALLOW_ORIGINS` setting.
+- API Security via a mock `X-API-Key` dependency injection on the insurance API.
+- **Widgets** - render policy comparisons, receipts, and status badges as UI cards.
+- **Voice** - low-latency speech in and out using the browser's Web Speech API.
+- **RAG** - grounds answers about coverage wording in a synthetic knowledge base using Gemini embeddings and an in-memory vector store.
 
 Remaining work:
 
 - `create_all` -> Alembic migrations for safe schema changes.
-- In-memory agent checkpointer -> persistent (langgraph-checkpoint-postgres
-  or Redis).
-- Auth (API keys or JWT) for the insurance API.
-
-Planned bonuses:
-
-- **Widgets** - render policy comparisons, receipts, and status badges as UI
-  cards from the tool results, instead of plain text.
-- **Voice** - low-latency speech in and out.
-- **RAG** - ground answers about coverage wording in a knowledge base using
-  Gemini embeddings + pgvector.
+- In-memory agent checkpointer -> persistent (langgraph-checkpoint-postgres or Redis).
+- Full JWT/OAuth2 Auth for the insurance API (currently using a mock API key).
 
 The Gemini free tier's per-minute limit can interrupt a heavy turn; a model
 fallback or a paid tier would remove that for production.
